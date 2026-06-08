@@ -1,14 +1,13 @@
 """
-ATS Checker Module
-Analyzes resume for ATS (Applicant Tracking System) compatibility
+ATS Checker Module - Enhanced
+Analyzes resume for ATS (Applicant Tracking System) compatibility with improved detection
 """
 
 import re
-from typing import Dict, List, Tuple
-
+from typing import Dict, List
 
 class ATSChecker:
-    """Check resume for ATS compatibility"""
+    """Enhanced ATS compatibility checker with better detection"""
     
     @staticmethod
     def check_contact_information(resume_text: str) -> Dict:
@@ -32,8 +31,8 @@ class ATSChecker:
         else:
             issues.append("Missing email address")
         
-        # Check for phone number
-        phone_pattern = r'\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b'
+        # Check for phone number (flexible)
+        phone_pattern = r'\+?[0-9\s\-()]{10,}'
         has_phone = bool(re.search(phone_pattern, resume_text))
         if has_phone:
             score += 25
@@ -41,24 +40,32 @@ class ATSChecker:
             issues.append("Missing phone number")
         
         # Check for LinkedIn URL
-        linkedin_pattern = r'linkedin\.com'
+        linkedin_pattern = r'linkedin\.com|linkedin'
         has_linkedin = bool(re.search(linkedin_pattern, resume_text, re.IGNORECASE))
         if has_linkedin:
             score += 25
         else:
-            issues.append("Missing LinkedIn profile")
+            pass  # LinkedIn is optional
         
-        # Check for location
-        if re.search(r'\b(city|state|country|location)\b', resume_text, re.IGNORECASE):
-            score += 25
-        else:
-            issues.append("Missing location information")
+        # Check for GitHub
+        github_pattern = r'github\.com|github'
+        has_github = bool(re.search(github_pattern, resume_text, re.IGNORECASE))
+        if has_github:
+            score += 15
+        
+        # Check for location (improved detection)
+        location_pattern = r'\b(?:Delhi|Mumbai|Bangalore|Hyderabad|Pune|Chennai|Kolkata|Ahmedabad|Jaipur|Lucknow|USA|UK|Canada|Australia|Singapore|Berlin|London|New York|San Francisco|Remote)\b'
+        has_location = bool(re.search(location_pattern, resume_text, re.IGNORECASE))
+        if has_location:
+            score += 10
         
         return {
-            "score": score,
+            "score": min(score, 100),
             "has_email": has_email,
             "has_phone": has_phone,
             "has_linkedin": has_linkedin,
+            "has_github": has_github,
+            "has_location": has_location,
             "issues": issues
         }
     
@@ -76,15 +83,15 @@ class ATSChecker:
         score = 0
         issues = []
         
-        # Check for simple formatting (no fancy characters)
+        # Check for simple formatting
         fancy_chars = len(re.findall(r'[^\x00-\x7F]', resume_text))
-        if fancy_chars == 0:
+        if fancy_chars <= 5:
             score += 30
         else:
-            issues.append(f"Contains {fancy_chars} non-ASCII characters (may cause ATS issues)")
+            issues.append(f"Contains {fancy_chars} special characters (may cause ATS issues)")
         
-        # Check for section headers
-        section_keywords = ['experience', 'education', 'skills', 'project', 'summary']
+        # Check for section headers (improved detection)
+        section_keywords = ['experience', 'education', 'skills', 'project', 'summary', 'work']
         found_sections = sum(1 for keyword in section_keywords 
                            if re.search(rf'\b{keyword}\b', resume_text, re.IGNORECASE))
         
@@ -94,8 +101,8 @@ class ATSChecker:
         if found_sections < 3:
             issues.append("Missing important sections (Experience, Education, Skills)")
         
-        # Check for tables or complex formatting indicators
-        if '<' not in resume_text and '{' not in resume_text:
+        # Check for tables or complex formatting
+        if '<' not in resume_text and '{' not in resume_text and '|' not in resume_text:
             score += 30
         else:
             issues.append("May contain HTML/complex formatting that ATS cannot parse")
@@ -131,7 +138,8 @@ class ATSChecker:
         action_verbs = [
             'developed', 'designed', 'implemented', 'managed', 'led',
             'created', 'built', 'improved', 'optimized', 'enhanced',
-            'increased', 'decreased', 'analyzed', 'demonstrated', 'achieved'
+            'increased', 'decreased', 'analyzed', 'demonstrated', 'achieved',
+            'built', 'deployed', 'tested', 'automated', 'integrated'
         ]
         
         verb_count = sum(1 for verb in action_verbs 
@@ -150,14 +158,15 @@ class ATSChecker:
         else:
             issues.append("Add more quantifiable achievements (numbers, percentages)")
         
-        # Check for industry keywords if JD provided
+        # Check for industry keywords
         if jd_text:
             jd_keywords = re.findall(r'\b[a-z]{4,}\b', jd_text.lower())
             resume_keywords = re.findall(r'\b[a-z]{4,}\b', resume_text.lower())
             
-            keyword_match = len(set(jd_keywords) & set(resume_keywords))
-            keyword_score = min((keyword_match / max(len(set(jd_keywords)), 1)) * 30, 30)
-            score += keyword_score
+            if jd_keywords:
+                keyword_match = len(set(jd_keywords) & set(resume_keywords))
+                keyword_score = min((keyword_match / max(len(set(jd_keywords)), 1)) * 30, 30)
+                score += keyword_score
         else:
             score += 20
         
@@ -171,7 +180,7 @@ class ATSChecker:
     @staticmethod
     def calculate_ats_score(resume_text: str, jd_text: str = None) -> Dict:
         """
-        Calculate overall ATS score
+        Calculate overall ATS score with balanced weighting
         
         Args:
             resume_text: Resume text
@@ -184,11 +193,11 @@ class ATSChecker:
         formatting = ATSChecker.check_formatting(resume_text)
         keywords = ATSChecker.check_keyword_density(resume_text, jd_text)
         
-        # Weighted average
+        # Balanced weighted average
         overall_score = (
-            contact_info["score"] * 0.3 +
-            formatting["score"] * 0.3 +
-            keywords["score"] * 0.4
+            contact_info["score"] * 0.25 +
+            formatting["score"] * 0.25 +
+            keywords["score"] * 0.50
         )
         
         all_issues = (
@@ -198,14 +207,14 @@ class ATSChecker:
         )
         
         return {
-            "overall_ats_score": round(overall_score, 2),
-            "contact_information_score": contact_info["score"],
-            "formatting_score": round(formatting["score"], 2),
-            "keyword_optimization_score": round(keywords["score"], 2),
+            "overall_ats_score": round(overall_score),
+            "contact_information_score": round(contact_info["score"]),
+            "formatting_score": round(formatting["score"]),
+            "keyword_optimization_score": round(keywords["score"]),
             "breakdown": {
-                "Contact Information": contact_info["score"],
-                "Formatting": round(formatting["score"], 2),
-                "Keywords & Content": round(keywords["score"], 2)
+                "Contact Information": round(contact_info["score"]),
+                "Formatting": round(formatting["score"]),
+                "Keywords & Content": round(keywords["score"])
             },
             "issues": list(set(all_issues)),
             "action_verbs_count": keywords.get("action_verb_count", 0),
@@ -226,7 +235,7 @@ class ATSChecker:
         suggestions = []
         
         if ats_analysis["contact_information_score"] < 75:
-            suggestions.append("✓ Add complete contact information (email, phone, LinkedIn, location)")
+            suggestions.append("✓ Add complete contact information (email, phone, LinkedIn)")
         
         if ats_analysis["formatting_score"] < 75:
             suggestions.append("✓ Use simple formatting (avoid tables, graphics, and special characters)")

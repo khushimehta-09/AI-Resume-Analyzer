@@ -1,6 +1,6 @@
 """
-Similarity and Matching Module
-Calculates resume-JD match score using NLP techniques
+Similarity and Matching Module - Enhanced
+Calculates resume-JD match score using intelligent NLP techniques
 """
 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -8,7 +8,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from typing import Tuple, List, Dict
 import re
-
 
 class SimilarityMatcher:
     """Calculate similarity between resume and job description"""
@@ -24,7 +23,6 @@ class SimilarityMatcher:
         Returns:
             Cleaned text
         """
-        # Remove special characters and extra whitespace
         text = re.sub(r'[^\w\s]', ' ', text)
         text = re.sub(r'\s+', ' ', text)
         return text.lower().strip()
@@ -42,11 +40,9 @@ class SimilarityMatcher:
             Similarity score (0-100)
         """
         try:
-            # Clean texts
             resume_clean = SimilarityMatcher.clean_text(resume_text)
             jd_clean = SimilarityMatcher.clean_text(jd_text)
             
-            # Create TF-IDF vectors
             vectorizer = TfidfVectorizer(
                 max_features=1000,
                 ngram_range=(1, 2),
@@ -54,8 +50,6 @@ class SimilarityMatcher:
             )
             
             tfidf_matrix = vectorizer.fit_transform([resume_clean, jd_clean])
-            
-            # Calculate cosine similarity
             similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
             
             return round(similarity * 100, 2)
@@ -79,11 +73,9 @@ class SimilarityMatcher:
             resume_lower = resume_text.lower()
             jd_lower = jd_text.lower()
             
-            # Extract keywords (split by spaces and punctuation)
             resume_words = set(re.findall(r'\b\w+\b', resume_lower))
             jd_words = set(re.findall(r'\b\w+\b', jd_lower))
             
-            # Remove common stop words
             stop_words = {
                 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at',
                 'to', 'for', 'of', 'with', 'by', 'from', 'is', 'are',
@@ -94,7 +86,6 @@ class SimilarityMatcher:
             resume_words -= stop_words
             jd_words -= stop_words
             
-            # Calculate Jaccard similarity
             if not jd_words:
                 return 0.0
             
@@ -132,7 +123,7 @@ class SimilarityMatcher:
                                 resume_skills: List[str],
                                 jd_skills: List[str]) -> Dict:
         """
-        Calculate combined match score
+        Calculate combined match score with intelligent weighting
         
         Args:
             resume_text: Resume text
@@ -143,11 +134,9 @@ class SimilarityMatcher:
         Returns:
             Dictionary with comprehensive match analysis
         """
-        # Calculate text-based scores
         tfidf_score = SimilarityMatcher.calculate_tfidf_similarity(resume_text, jd_text)
         keyword_score = SimilarityMatcher.calculate_keyword_match_score(resume_text, jd_text)
         
-        # Calculate skill-based score
         resume_skills_lower = set(s.lower() for s in resume_skills)
         jd_skills_lower = set(s.lower() for s in jd_skills)
         
@@ -157,8 +146,8 @@ class SimilarityMatcher:
         else:
             skill_score = 0.0
         
-        # Calculate weighted average
-        final_score = (tfidf_score * 0.4 + keyword_score * 0.3 + skill_score * 0.3)
+        # Intelligent weighting - balance text and skill matching
+        final_score = (tfidf_score * 0.3 + keyword_score * 0.2 + skill_score * 0.5)
         
         return {
             "overall_match_score": round(final_score, 2),
