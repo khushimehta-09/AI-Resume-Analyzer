@@ -6,13 +6,24 @@ Streamlit web interface for resume analysis
 import streamlit as st
 import tempfile
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 
-from utils import (
-    PDFParser, SkillExtractor, SimilarityMatcher,
-    ATSChecker, AISuggester, ReportGenerator
-)
+# Add the current directory to Python path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+try:
+    from utils.pdf_parser import PDFParser
+    from utils.skill_extractor import SkillExtractor
+    from utils.similarity import SimilarityMatcher
+    from utils.ats_checker import ATSChecker
+    from utils.ai_suggestions import AISuggester
+    from utils.report_generator import ReportGenerator
+except ImportError as e:
+    st.error(f"Import Error: {str(e)}")
+    st.error("Make sure all utility files are in the 'utils' folder")
+    st.stop()
 
 # Page configuration
 st.set_page_config(
@@ -160,6 +171,8 @@ def upload_and_parse_resume():
             return True
         except Exception as e:
             st.error(f"Error parsing resume: {str(e)}")
+            import traceback
+            st.error(traceback.format_exc())
             return False
     
     return False
@@ -617,6 +630,8 @@ def main():
             
             except Exception as e:
                 st.error(f"Error: {str(e)}")
+                import traceback
+                st.error(traceback.format_exc())
     
     elif page == "Reports":
         st.markdown("## Analysis Reports")
