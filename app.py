@@ -281,6 +281,8 @@ def analyze_resume():
             
         except Exception as e:
             st.error(f"Error during analysis: {str(e)}")
+            import traceback
+            st.error(traceback.format_exc())
             return None
 
 
